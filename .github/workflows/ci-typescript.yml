@@ -1,0 +1,161 @@
+name: "CI: TypeScript"
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        type: string
+        default: "20"
+      working-directory:
+        type: string
+        default: "."
+      package-manager:
+        description: "npm or pnpm"
+        type: string
+        default: "npm"
+      test-runner:
+        description: "vitest or jest"
+        type: string
+        default: "vitest"
+      coverage-threshold:
+        type: number
+        default: 80
+      typecheck-enabled:
+        type: boolean
+        default: true
+      security-enabled:
+        type: boolean
+        default: true
+
+jobs:
+  lint:
+    name: Lint (ESLint)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      - name: Setup pnpm
+        if: inputs.package-manager == 'pnpm'
+        uses: pnpm/action-setup@v4
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: ${{ inputs.working-directory }}/node_modules
+          key: node-${{ runner.os }}-${{ inputs.package-manager }}-${{ hashFiles(format('{0}/*lock*', inputs.working-directory)) }}
+          restore-keys: node-${{ runner.os }}-${{ inputs.package-manager }}-
+
+      - name: Install dependencies
+        run: ${{ inputs.package-manager }} install
+
+      - name: ESLint
+        run: npx eslint .
+
+  typecheck:
+    name: Type check (tsc)
+    if: inputs.typecheck-enabled
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      - name: Setup pnpm
+        if: inputs.package-manager == 'pnpm'
+        uses: pnpm/action-setup@v4
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: ${{ inputs.working-directory }}/node_modules
+          key: node-${{ runner.os }}-${{ inputs.package-manager }}-${{ hashFiles(format('{0}/*lock*', inputs.working-directory)) }}
+          restore-keys: node-${{ runner.os }}-${{ inputs.package-manager }}-
+
+      - name: Install dependencies
+        run: ${{ inputs.package-manager }} install
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      - name: Setup pnpm
+        if: inputs.package-manager == 'pnpm'
+        uses: pnpm/action-setup@v4
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: ${{ inputs.working-directory }}/node_modules
+          key: node-${{ runner.os }}-${{ inputs.package-manager }}-${{ hashFiles(format('{0}/*lock*', inputs.working-directory)) }}
+          restore-keys: node-${{ runner.os }}-${{ inputs.package-manager }}-
+
+      - name: Install dependencies
+        run: ${{ inputs.package-manager }} install
+
+      - name: Run tests (vitest)
+        if: inputs.test-runner == 'vitest'
+        run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=clover
+
+      - name: Run tests (jest)
+        if: inputs.test-runner == 'jest'
+        run: npx jest --coverage --coverageReporters=text --coverageReporters=clover
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: ${{ inputs.working-directory }}/coverage/clover.xml
+
+  security:
+    name: Security audit
+    if: inputs.security-enabled
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      - name: Setup pnpm
+        if: inputs.package-manager == 'pnpm'
+        uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: ${{ inputs.package-manager }} install
+
+      - name: Dependency audit (npm)
+        if: inputs.package-manager == 'npm'
+        run: npm audit --audit-level=high
+
+      - name: Dependency audit (pnpm)
+        if: inputs.package-manager == 'pnpm'
+        run: pnpm audit --audit-level=high

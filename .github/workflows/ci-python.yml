@@ -1,0 +1,189 @@
+name: "CI: Python"
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        type: string
+        default: "3.11"
+      working-directory:
+        type: string
+        default: "."
+      install-command:
+        type: string
+        default: "pip install -e '.[dev]'"
+      src-path:
+        type: string
+        default: "src/"
+      test-path:
+        type: string
+        default: "tests/"
+      coverage-package:
+        description: "Package path for --cov (e.g. src/myapp). Empty = no coverage."
+        type: string
+        default: ""
+      coverage-threshold:
+        type: number
+        default: 80
+      mypy-enabled:
+        type: boolean
+        default: true
+      security-enabled:
+        type: boolean
+        default: true
+      bandit-skips:
+        type: string
+        default: "B101"
+    secrets:
+      env-vars:
+        description: "Extra env vars as KEY=VALUE lines (e.g. SECRET_KEY=dummy)"
+        required: false
+
+jobs:
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles(format('{0}/pyproject.toml', inputs.working-directory)) }}
+          restore-keys: pip-${{ runner.os }}-
+
+      - name: Set env vars
+        if: secrets.env-vars != ''
+        run: |
+          echo "${{ secrets.env-vars }}" >> $GITHUB_ENV
+
+      - name: Install dependencies
+        run: ${{ inputs.install-command }}
+
+      - name: Ruff check
+        run: ruff check ${{ inputs.src-path }} ${{ inputs.test-path }}
+
+      - name: Ruff format check
+        run: ruff format --check ${{ inputs.src-path }} ${{ inputs.test-path }}
+
+  typecheck:
+    name: Type check (mypy)
+    if: inputs.mypy-enabled
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles(format('{0}/pyproject.toml', inputs.working-directory)) }}
+          restore-keys: pip-${{ runner.os }}-
+
+      - name: Set env vars
+        if: secrets.env-vars != ''
+        run: |
+          echo "${{ secrets.env-vars }}" >> $GITHUB_ENV
+
+      - name: Install dependencies
+        run: ${{ inputs.install-command }}
+
+      - name: Mypy
+        run: mypy ${{ inputs.src-path }}
+
+  test:
+    name: Tests (pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles(format('{0}/pyproject.toml', inputs.working-directory)) }}
+          restore-keys: pip-${{ runner.os }}-
+
+      - name: Set env vars
+        if: secrets.env-vars != ''
+        run: |
+          echo "${{ secrets.env-vars }}" >> $GITHUB_ENV
+
+      - name: Install dependencies
+        run: ${{ inputs.install-command }}
+
+      - name: Run tests with coverage
+        if: inputs.coverage-package != ''
+        run: |
+          pytest ${{ inputs.test-path }} \
+            --cov=${{ inputs.coverage-package }} \
+            --cov-report=xml:coverage.xml \
+            --cov-report=term-missing \
+            --cov-fail-under=${{ inputs.coverage-threshold }}
+
+      - name: Run tests without coverage
+        if: inputs.coverage-package == ''
+        run: pytest ${{ inputs.test-path }}
+
+      - name: Upload coverage artifact
+        if: inputs.coverage-package != '' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: ${{ inputs.working-directory }}/coverage.xml
+
+  security:
+    name: Security audit
+    if: inputs.security-enabled
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles(format('{0}/pyproject.toml', inputs.working-directory)) }}
+          restore-keys: pip-${{ runner.os }}-
+
+      - name: Set env vars
+        if: secrets.env-vars != ''
+        run: |
+          echo "${{ secrets.env-vars }}" >> $GITHUB_ENV
+
+      - name: Install dependencies
+        run: ${{ inputs.install-command }}
+
+      - name: Install security tools
+        run: pip install pip-audit bandit
+
+      - name: Dependency audit (pip-audit)
+        run: pip-audit
+
+      - name: Code security scan (bandit)
+        run: bandit -r ${{ inputs.src-path }} --skip ${{ inputs.bandit-skips }} -x ${{ inputs.test-path }}
