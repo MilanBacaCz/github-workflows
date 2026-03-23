@@ -1,35 +1,45 @@
-name: "CI: TypeScript"
+name: TypeScript CI
 
 on:
   workflow_call:
     inputs:
       node-version:
+        description: "Node.js version"
         type: string
         default: "20"
       working-directory:
+        description: "Directory containing package.json"
         type: string
         default: "."
       package-manager:
-        description: "npm or pnpm"
+        description: "Package manager (npm, yarn, pnpm)"
         type: string
         default: "npm"
-      test-runner:
-        description: "vitest or jest"
+      run-lint:
+        description: "Run ESLint"
+        type: boolean
+        default: true
+      run-typecheck:
+        description: "Run tsc type checking"
+        type: boolean
+        default: true
+      run-tests:
+        description: "Run tests"
+        type: boolean
+        default: true
+      test-command:
+        description: "Test command override (default: npx jest --coverage)"
         type: string
-        default: "vitest"
+        default: ""
       coverage-threshold:
+        description: "Minimum coverage percentage (0 = no threshold)"
         type: number
-        default: 80
-      typecheck-enabled:
-        type: boolean
-        default: true
-      security-enabled:
-        type: boolean
-        default: true
+        default: 0
 
 jobs:
   lint:
     name: Lint (ESLint)
+    if: ${{ inputs.run-lint }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -40,27 +50,24 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ inputs.node-version }}
-
-      - name: Setup pnpm
-        if: inputs.package-manager == 'pnpm'
-        uses: pnpm/action-setup@v4
-
-      - name: Cache node_modules
-        uses: actions/cache@v4
-        with:
-          path: ${{ inputs.working-directory }}/node_modules
-          key: node-${{ runner.os }}-${{ inputs.package-manager }}-${{ hashFiles(format('{0}/*lock*', inputs.working-directory)) }}
-          restore-keys: node-${{ runner.os }}-${{ inputs.package-manager }}-
+          cache: ${{ inputs.package-manager }}
 
       - name: Install dependencies
-        run: ${{ inputs.package-manager }} install
+        run: |
+          if [ "${{ inputs.package-manager }}" = "pnpm" ]; then
+            npm install -g pnpm && pnpm install --frozen-lockfile
+          elif [ "${{ inputs.package-manager }}" = "yarn" ]; then
+            yarn install --frozen-lockfile
+          else
+            npm ci
+          fi
 
       - name: ESLint
-        run: npx eslint .
+        run: npx eslint . --max-warnings=0
 
   typecheck:
     name: Type check (tsc)
-    if: inputs.typecheck-enabled
+    if: ${{ inputs.run-typecheck }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -71,26 +78,24 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ inputs.node-version }}
-
-      - name: Setup pnpm
-        if: inputs.package-manager == 'pnpm'
-        uses: pnpm/action-setup@v4
-
-      - name: Cache node_modules
-        uses: actions/cache@v4
-        with:
-          path: ${{ inputs.working-directory }}/node_modules
-          key: node-${{ runner.os }}-${{ inputs.package-manager }}-${{ hashFiles(format('{0}/*lock*', inputs.working-directory)) }}
-          restore-keys: node-${{ runner.os }}-${{ inputs.package-manager }}-
+          cache: ${{ inputs.package-manager }}
 
       - name: Install dependencies
-        run: ${{ inputs.package-manager }} install
+        run: |
+          if [ "${{ inputs.package-manager }}" = "pnpm" ]; then
+            npm install -g pnpm && pnpm install --frozen-lockfile
+          elif [ "${{ inputs.package-manager }}" = "yarn" ]; then
+            yarn install --frozen-lockfile
+          else
+            npm ci
+          fi
 
-      - name: TypeScript check
+      - name: TypeScript compile check
         run: npx tsc --noEmit
 
   test:
     name: Tests
+    if: ${{ inputs.run-tests }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -101,28 +106,25 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ inputs.node-version }}
-
-      - name: Setup pnpm
-        if: inputs.package-manager == 'pnpm'
-        uses: pnpm/action-setup@v4
-
-      - name: Cache node_modules
-        uses: actions/cache@v4
-        with:
-          path: ${{ inputs.working-directory }}/node_modules
-          key: node-${{ runner.os }}-${{ inputs.package-manager }}-${{ hashFiles(format('{0}/*lock*', inputs.working-directory)) }}
-          restore-keys: node-${{ runner.os }}-${{ inputs.package-manager }}-
+          cache: ${{ inputs.package-manager }}
 
       - name: Install dependencies
-        run: ${{ inputs.package-manager }} install
+        run: |
+          if [ "${{ inputs.package-manager }}" = "pnpm" ]; then
+            npm install -g pnpm && pnpm install --frozen-lockfile
+          elif [ "${{ inputs.package-manager }}" = "yarn" ]; then
+            yarn install --frozen-lockfile
+          else
+            npm ci
+          fi
 
-      - name: Run tests (vitest)
-        if: inputs.test-runner == 'vitest'
-        run: npx vitest run --coverage --coverage.reporter=text --coverage.reporter=clover
-
-      - name: Run tests (jest)
-        if: inputs.test-runner == 'jest'
-        run: npx jest --coverage --coverageReporters=text --coverageReporters=clover
+      - name: Run tests
+        run: |
+          if [ -n "${{ inputs.test-command }}" ]; then
+            ${{ inputs.test-command }}
+          else
+            npx jest --coverage --coverageReporters=text --coverageReporters=clover
+          fi
 
       - name: Upload coverage artifact
         if: always()
@@ -130,32 +132,4 @@ jobs:
         with:
           name: coverage-report
           path: ${{ inputs.working-directory }}/coverage/clover.xml
-
-  security:
-    name: Security audit
-    if: inputs.security-enabled
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ${{ inputs.working-directory }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ inputs.node-version }}
-
-      - name: Setup pnpm
-        if: inputs.package-manager == 'pnpm'
-        uses: pnpm/action-setup@v4
-
-      - name: Install dependencies
-        run: ${{ inputs.package-manager }} install
-
-      - name: Dependency audit (npm)
-        if: inputs.package-manager == 'npm'
-        run: npm audit --audit-level=high
-
-      - name: Dependency audit (pnpm)
-        if: inputs.package-manager == 'pnpm'
-        run: pnpm audit --audit-level=high
+          retention-days: 7

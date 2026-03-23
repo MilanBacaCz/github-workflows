@@ -1,51 +1,63 @@
-name: "Build: Flutter"
+name: Flutter Build
 
 on:
   workflow_call:
     inputs:
       working-directory:
+        description: "Directory containing pubspec.yaml"
         type: string
         default: "."
       flutter-version:
+        description: "Flutter version or channel"
         type: string
         default: "stable"
       build-android:
+        description: "Build Android"
         type: boolean
         default: true
       build-ios:
+        description: "Build iOS"
         type: boolean
         default: false
       build-type:
-        description: "release, profile, or debug"
+        description: "Build type (release, profile, debug)"
         type: string
         default: "release"
       android-format:
-        description: "apk or appbundle"
+        description: "Android output format (apk, appbundle)"
         type: string
         default: "apk"
+      java-version:
+        description: "Java version for Android build"
+        type: string
+        default: "17"
     secrets:
       keystore-base64:
         description: "Android keystore file (base64 encoded)"
         required: false
       keystore-password:
+        description: "Android keystore password"
         required: false
       key-alias:
+        description: "Android key alias"
         required: false
       key-password:
+        description: "Android key password"
         required: false
       ios-certificate-base64:
-        description: "iOS distribution certificate (.p12, base64)"
+        description: "iOS signing certificate (base64)"
         required: false
       ios-provisioning-profile-base64:
         description: "iOS provisioning profile (base64)"
         required: false
-      ios-certificate-password:
+      ios-keychain-password:
+        description: "Temporary keychain password"
         required: false
 
 jobs:
   build-android:
-    name: Build Android
-    if: inputs.build-android
+    name: Android (${{ inputs.android-format }})
+    if: ${{ inputs.build-android }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -56,7 +68,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: ${{ inputs.java-version }}
 
       - uses: subosito/flutter-action@v2
         with:
@@ -66,10 +78,14 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Setup keystore
-        if: secrets.keystore-base64 != ''
+      - name: Decode keystore
+        if: ${{ secrets.keystore-base64 != '' }}
         run: |
           echo "${{ secrets.keystore-base64 }}" | base64 --decode > android/app/keystore.jks
+
+      - name: Create key.properties
+        if: ${{ secrets.keystore-base64 != '' }}
+        run: |
           cat > android/key.properties << EOF
           storePassword=${{ secrets.keystore-password }}
           keyPassword=${{ secrets.key-password }}
@@ -78,32 +94,32 @@ jobs:
           EOF
 
       - name: Build APK
-        if: inputs.android-format == 'apk'
+        if: ${{ inputs.android-format == 'apk' }}
         run: flutter build apk --${{ inputs.build-type }}
 
       - name: Build App Bundle
-        if: inputs.android-format == 'appbundle'
+        if: ${{ inputs.android-format == 'appbundle' }}
         run: flutter build appbundle --${{ inputs.build-type }}
 
       - name: Upload APK
-        if: inputs.android-format == 'apk'
+        if: ${{ inputs.android-format == 'apk' }}
         uses: actions/upload-artifact@v4
         with:
           name: android-build
-          path: ${{ inputs.working-directory }}/build/app/outputs/flutter-apk/app-${{ inputs.build-type }}.apk
+          path: ${{ inputs.working-directory }}/build/app/outputs/flutter-apk/*.apk
           retention-days: 14
 
-      - name: Upload App Bundle
-        if: inputs.android-format == 'appbundle'
+      - name: Upload AAB
+        if: ${{ inputs.android-format == 'appbundle' }}
         uses: actions/upload-artifact@v4
         with:
           name: android-build
-          path: ${{ inputs.working-directory }}/build/app/outputs/bundle/${{ inputs.build-type }}/*.aab
+          path: ${{ inputs.working-directory }}/build/app/outputs/bundle/*/*.aab
           retention-days: 14
 
   build-ios:
-    name: Build iOS
-    if: inputs.build-ios
+    name: iOS (IPA)
+    if: ${{ inputs.build-ios }}
     runs-on: macos-latest
     defaults:
       run:
@@ -119,36 +135,32 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Install CocoaPods
-        run: cd ios && pod install
-
-      - name: Setup iOS signing
-        if: secrets.ios-certificate-base64 != ''
+      - name: Import certificate and provisioning profile
+        if: ${{ secrets.ios-certificate-base64 != '' }}
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.ios-certificate-base64 }}
+          PROFILE_BASE64: ${{ secrets.ios-provisioning-profile-base64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.ios-keychain-password }}
         run: |
-          KEYCHAIN_PATH=$RUNNER_TEMP/build.keychain
-          CERT_PATH=$RUNNER_TEMP/certificate.p12
-          PP_PATH=$RUNNER_TEMP/profile.mobileprovision
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
 
-          # Decode secrets
-          echo "${{ secrets.ios-certificate-base64 }}" | base64 --decode > $CERT_PATH
-          echo "${{ secrets.ios-provisioning-profile-base64 }}" | base64 --decode > $PP_PATH
+          echo -n "$CERTIFICATE_BASE64" | base64 --decode -o "$CERTIFICATE_PATH"
+          echo -n "$PROFILE_BASE64" | base64 --decode -o "$PP_PATH"
 
-          # Create temporary keychain
-          security create-keychain -p "" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "" $KEYCHAIN_PATH
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERTIFICATE_PATH" -P "" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
 
-          # Import certificate
-          security import $CERT_PATH -P "${{ secrets.ios-certificate-password }}" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security set-key-partition-list -S apple-tool:,apple: -k "" $KEYCHAIN_PATH
-          security list-keychain -d user -s $KEYCHAIN_PATH
-
-          # Install provisioning profile
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
+          cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles
 
       - name: Build IPA
-        run: flutter build ipa --${{ inputs.build-type }} --no-codesign || flutter build ipa --${{ inputs.build-type }}
+        run: flutter build ipa --${{ inputs.build-type }} --no-codesign
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
@@ -159,4 +171,5 @@ jobs:
 
       - name: Cleanup keychain
         if: always()
-        run: security delete-keychain $RUNNER_TEMP/build.keychain 2>/dev/null || true
+        run: |
+          security delete-keychain $RUNNER_TEMP/app-signing.keychain-db 2>/dev/null || true

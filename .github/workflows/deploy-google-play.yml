@@ -1,51 +1,56 @@
-name: "Deploy: Google Play"
+name: Deploy to Google Play
 
 on:
   workflow_call:
     inputs:
       track:
-        description: "Google Play track: internal, alpha, beta, production"
+        description: "Google Play track (internal, alpha, beta, production)"
         type: string
         default: "internal"
       artifact-name:
+        description: "Artifact name containing AAB"
         type: string
         default: "android-build"
       package-name:
-        description: "Android package name (e.g. com.example.myapp)"
+        description: "Android package name (e.g. com.example.app)"
         type: string
         required: true
       status:
-        description: "Release status: completed, draft, halted, inProgress"
+        description: "Release status (completed, draft, halted)"
         type: string
         default: "completed"
     secrets:
       google-play-service-account-json:
-        description: "Google Play service account JSON key"
+        description: "Google Play service account JSON"
         required: true
 
 jobs:
   deploy:
-    name: Deploy to Google Play (${{ inputs.track }})
+    name: Upload to Google Play (${{ inputs.track }})
     runs-on: ubuntu-latest
     steps:
-      - name: Download build artifact
+      - name: Download artifact
         uses: actions/download-artifact@v4
         with:
           name: ${{ inputs.artifact-name }}
-          path: build/
+          path: build-output
 
-      - name: Find AAB/APK file
-        id: find-file
+      - name: Find AAB file
+        id: find-aab
         run: |
-          FILE=$(find build/ -name "*.aab" -o -name "*.apk" | head -1)
-          echo "file=${FILE}" >> $GITHUB_OUTPUT
-          echo "Found: ${FILE}"
+          AAB=$(find build-output -name "*.aab" | head -1)
+          if [ -z "$AAB" ]; then
+            echo "::error::No AAB file found in artifact"
+            exit 1
+          fi
+          echo "aab-path=$AAB" >> "$GITHUB_OUTPUT"
+          echo "Found AAB: $AAB"
 
       - name: Upload to Google Play
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.google-play-service-account-json }}
           packageName: ${{ inputs.package-name }}
-          releaseFiles: ${{ steps.find-file.outputs.file }}
+          releaseFiles: ${{ steps.find-aab.outputs.aab-path }}
           track: ${{ inputs.track }}
           status: ${{ inputs.status }}

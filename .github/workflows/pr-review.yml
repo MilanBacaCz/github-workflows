@@ -1,39 +1,40 @@
-name: "PR Review"
+name: PR Review
 
 on:
   workflow_call:
     inputs:
-      python-version:
-        type: string
-        default: "3.11"
       working-directory:
+        description: "Working directory"
         type: string
         default: "."
-      install-command:
-        type: string
-        default: "pip install -e '.[dev]'"
-      test-path:
-        type: string
-        default: "tests/"
       coverage-package:
-        description: "Package path for --cov (e.g. src/myapp)"
+        description: "Package path for coverage"
         type: string
-        default: ""
+        default: "src"
+      language:
+        description: "Language for coverage (python, php, typescript, flutter)"
+        type: string
+        default: "python"
+      python-version:
+        description: "Python version (for python language)"
+        type: string
+        default: "3.11"
+      node-version:
+        description: "Node.js version (for typescript language)"
+        type: string
+        default: "20"
       labeler-config:
+        description: "Path to labeler config file"
         type: string
         default: ".github/labeler.yml"
     secrets:
       env-vars:
+        description: "Environment variables (KEY=VALUE per line)"
         required: false
-
-permissions:
-  contents: read
-  pull-requests: write
 
 jobs:
   coverage-comment:
-    name: Coverage report
-    if: inputs.coverage-package != ''
+    name: Coverage comment
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -43,53 +44,100 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      # --- Python ---
+      - name: Setup Python
+        if: ${{ inputs.language == 'python' }}
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ inputs.python-version }}
 
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: pip-${{ runner.os }}-${{ hashFiles(format('{0}/pyproject.toml', inputs.working-directory)) }}
-          restore-keys: pip-${{ runner.os }}-
+      - name: Install Python dependencies
+        if: ${{ inputs.language == 'python' }}
+        run: pip install -e ".[dev]"
 
-      - name: Set env vars
-        if: secrets.env-vars != ''
+      - name: Set environment variables
+        if: ${{ secrets.env-vars != '' }}
         run: |
-          echo "${{ secrets.env-vars }}" >> $GITHUB_ENV
+          echo "${{ secrets.env-vars }}" >> "$GITHUB_ENV"
 
-      - name: Install dependencies
-        run: ${{ inputs.install-command }}
-
-      - name: Run tests with coverage
+      - name: Run Python tests with coverage
+        if: ${{ inputs.language == 'python' }}
         run: |
-          pytest ${{ inputs.test-path }} \
+          pytest tests/ \
             --cov=${{ inputs.coverage-package }} \
             --cov-report=xml:coverage.xml \
-            --cov-report=term-missing
+            --cov-report=term-missing \
+            -q
 
-      - name: Post coverage comment
+      # --- PHP ---
+      - name: Setup PHP
+        if: ${{ inputs.language == 'php' }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          coverage: xdebug
+          tools: composer:v2
+
+      - name: Install PHP dependencies
+        if: ${{ inputs.language == 'php' }}
+        run: composer install --prefer-dist --no-progress
+
+      - name: Run PHP tests with coverage
+        if: ${{ inputs.language == 'php' }}
+        run: vendor/bin/phpunit --coverage-clover=coverage.xml
+
+      # --- TypeScript ---
+      - name: Setup Node.js
+        if: ${{ inputs.language == 'typescript' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      - name: Install TS dependencies
+        if: ${{ inputs.language == 'typescript' }}
+        run: npm ci
+
+      - name: Run TS tests with coverage
+        if: ${{ inputs.language == 'typescript' }}
+        run: npx jest --coverage --coverageReporters=text --coverageReporters=clover
+
+      # --- Parse & comment ---
+      - name: Parse coverage and comment
+        if: always()
         env:
           GH_TOKEN: ${{ github.token }}
-        working-directory: ${{ github.workspace }}
         run: |
-          COVERAGE=$(python3 -c "
+          if [ -f coverage.xml ]; then
+            COVERAGE=$(python3 -c "
           import xml.etree.ElementTree as ET
-          tree = ET.parse('${{ inputs.working-directory }}/coverage.xml')
-          rate = float(tree.getroot().attrib['line-rate'])
-          print(f'{rate * 100:.1f}')
-          ")
+          tree = ET.parse('coverage.xml')
+          root = tree.getroot()
+          # Cobertura format
+          if root.tag == 'coverage':
+              rate = root.get('line-rate', '0')
+              print(f'{float(rate)*100:.1f}')
+          # Clover format
+          elif root.find('.//metrics') is not None:
+              m = root.find('.//project/metrics')
+              stmts = int(m.get('statements','0'))
+              covered = int(m.get('coveredstatements','0'))
+              print(f'{covered/stmts*100:.1f}' if stmts else '0.0')
+          " 2>/dev/null || echo "N/A")
+          else
+            COVERAGE="N/A"
+          fi
 
-          BODY="## Coverage Report
+          BODY="## 📊 Coverage Report
 
           | Metric | Value |
           |--------|-------|
           | **Line coverage** | ${COVERAGE}% |
+          | **Language** | ${{ inputs.language }} |
 
-          > Generated by [centralized CI](https://github.com/MilanBacaCz/github-workflows)"
+          > Generated by [github-workflows](https://github.com/MilanBacaCz/github-workflows) CI"
 
-          gh pr comment ${{ github.event.pull_request.number }} --body "$BODY" --edit-last 2>/dev/null || \
-          gh pr comment ${{ github.event.pull_request.number }} --body "$BODY"
+          gh pr comment "${{ github.event.pull_request.number }}" --body "$BODY" --edit-last 2>/dev/null \
+            || gh pr comment "${{ github.event.pull_request.number }}" --body "$BODY"
 
   label-pr:
     name: Label PR
@@ -98,9 +146,6 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
-
       - uses: actions/labeler@v5
         with:
-          repo-token: ${{ github.token }}
           configuration-path: ${{ inputs.labeler-config }}

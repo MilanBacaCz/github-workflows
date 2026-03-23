@@ -1,0 +1,113 @@
+name: E2E Playwright
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: "Node.js version"
+        type: string
+        default: "20"
+      working-directory:
+        description: "Directory containing playwright config"
+        type: string
+        default: "."
+      test-directory:
+        description: "Directory with E2E tests"
+        type: string
+        default: "tests/e2e"
+      browsers:
+        description: "Browsers to install (chromium, firefox, webkit)"
+        type: string
+        default: "chromium"
+      start-command:
+        description: "Command to start the app before tests (e.g. npm run dev)"
+        type: string
+        default: ""
+      start-url:
+        description: "URL to wait for before running tests"
+        type: string
+        default: "http://localhost:3000"
+      framework:
+        description: "Test framework (node or python)"
+        type: string
+        default: "node"
+      python-version:
+        description: "Python version (only for framework=python)"
+        type: string
+        default: "3.11"
+    secrets:
+      env-vars:
+        description: "Environment variables (KEY=VALUE per line)"
+        required: false
+
+jobs:
+  e2e:
+    name: Playwright E2E
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # --- Node.js setup ---
+      - name: Setup Node.js
+        if: ${{ inputs.framework == 'node' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      - name: Install Node dependencies
+        if: ${{ inputs.framework == 'node' }}
+        run: npm ci
+
+      - name: Install Playwright browsers (Node)
+        if: ${{ inputs.framework == 'node' }}
+        run: npx playwright install --with-deps ${{ inputs.browsers }}
+
+      # --- Python setup ---
+      - name: Setup Python
+        if: ${{ inputs.framework == 'python' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install Python dependencies
+        if: ${{ inputs.framework == 'python' }}
+        run: |
+          pip install -e ".[dev]"
+          pip install pytest-playwright
+
+      - name: Install Playwright browsers (Python)
+        if: ${{ inputs.framework == 'python' }}
+        run: playwright install --with-deps ${{ inputs.browsers }}
+
+      # --- Common ---
+      - name: Set environment variables
+        if: ${{ secrets.env-vars != '' }}
+        run: |
+          echo "${{ secrets.env-vars }}" >> "$GITHUB_ENV"
+
+      - name: Start application
+        if: ${{ inputs.start-command != '' }}
+        run: |
+          ${{ inputs.start-command }} &
+          npx wait-on ${{ inputs.start-url }} --timeout 60000
+
+      - name: Run Playwright tests (Node)
+        if: ${{ inputs.framework == 'node' }}
+        run: npx playwright test
+
+      - name: Run Playwright tests (Python)
+        if: ${{ inputs.framework == 'python' }}
+        run: pytest ${{ inputs.test-directory }} --browser ${{ inputs.browsers }}
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            ${{ inputs.working-directory }}/playwright-report/
+            ${{ inputs.working-directory }}/test-results/
+          retention-days: 7

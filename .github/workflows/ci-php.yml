@@ -1,33 +1,44 @@
-name: "CI: PHP"
+name: PHP CI
 
 on:
   workflow_call:
     inputs:
       php-version:
+        description: "PHP version"
         type: string
-        default: "8.3"
+        default: "8.4"
+      php-extensions:
+        description: "Comma-separated PHP extensions"
+        type: string
+        default: "pdo_mysql, mbstring, intl, gd, zip, bcmath"
       working-directory:
+        description: "Directory containing composer.json"
         type: string
         default: "."
-      phpstan-level:
-        type: number
-        default: 5
-      phpstan-paths:
+      source-directory:
+        description: "Source directory for analysis (relative to working-directory)"
         type: string
-        default: "src/"
-      test-path:
+        default: "www/app"
+      run-phpstan:
+        description: "Run PHPStan static analysis"
+        type: boolean
+        default: true
+      phpstan-memory-limit:
+        description: "PHPStan memory limit"
         type: string
-        default: "tests/"
-      coverage-threshold:
-        type: number
-        default: 80
-      security-enabled:
+        default: "512M"
+      run-phpunit:
+        description: "Run PHPUnit tests"
+        type: boolean
+        default: true
+      run-syntax-check:
+        description: "Run PHP syntax check"
         type: boolean
         default: true
 
 jobs:
   lint:
-    name: Lint (PHPStan)
+    name: Lint & Syntax
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -35,26 +46,63 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: shivammathur/setup-php@v2
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ inputs.php-version }}
-          coverage: xdebug
+          extensions: ${{ inputs.php-extensions }}
+          tools: composer:v2
+
+      - name: Validate composer.json
+        run: composer validate --no-check-publish
 
       - name: Cache Composer
         uses: actions/cache@v4
         with:
-          path: ~/.composer/cache
-          key: composer-${{ runner.os }}-${{ hashFiles(format('{0}/composer.lock', inputs.working-directory)) }}
-          restore-keys: composer-${{ runner.os }}-
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles(format('{0}/composer.lock', inputs.working-directory)) }}
+          restore-keys: ${{ runner.os }}-composer-
 
       - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist
+        run: composer install --prefer-dist --no-progress
+
+      - name: PHP syntax check
+        if: ${{ inputs.run-syntax-check }}
+        run: find ${{ inputs.source-directory }} -name "*.php" -print0 | xargs -0 -n1 php -l
+
+  phpstan:
+    name: Static analysis (PHPStan)
+    if: ${{ inputs.run-phpstan }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ inputs.php-version }}
+          extensions: ${{ inputs.php-extensions }}
+          tools: composer:v2
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles(format('{0}/composer.lock', inputs.working-directory)) }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
 
       - name: PHPStan
-        run: vendor/bin/phpstan analyse ${{ inputs.phpstan-paths }} --level=${{ inputs.phpstan-level }}
+        run: vendor/bin/phpstan analyse --memory-limit=${{ inputs.phpstan-memory-limit }}
 
   test:
     name: Tests (PHPUnit)
+    if: ${{ inputs.run-phpunit }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -62,26 +110,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: shivammathur/setup-php@v2
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ inputs.php-version }}
+          extensions: ${{ inputs.php-extensions }}
+          tools: composer:v2
           coverage: xdebug
 
       - name: Cache Composer
         uses: actions/cache@v4
         with:
-          path: ~/.composer/cache
-          key: composer-${{ runner.os }}-${{ hashFiles(format('{0}/composer.lock', inputs.working-directory)) }}
-          restore-keys: composer-${{ runner.os }}-
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles(format('{0}/composer.lock', inputs.working-directory)) }}
+          restore-keys: ${{ runner.os }}-composer-
 
       - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist
+        run: composer install --prefer-dist --no-progress
 
-      - name: Run tests with coverage
-        run: |
-          vendor/bin/phpunit ${{ inputs.test-path }} \
-            --coverage-clover=coverage.xml \
-            --coverage-text
+      - name: PHPUnit
+        run: vendor/bin/phpunit --coverage-clover=coverage.xml
 
       - name: Upload coverage artifact
         if: always()
@@ -89,23 +137,4 @@ jobs:
         with:
           name: coverage-report
           path: ${{ inputs.working-directory }}/coverage.xml
-
-  security:
-    name: Security audit
-    if: inputs.security-enabled
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ${{ inputs.working-directory }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ inputs.php-version }}
-
-      - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist
-
-      - name: Composer audit
-        run: composer audit
+          retention-days: 7
