@@ -1,0 +1,51 @@
+name: "Deploy: Google Play"
+
+on:
+  workflow_call:
+    inputs:
+      track:
+        description: "Google Play track: internal, alpha, beta, production"
+        type: string
+        default: "internal"
+      artifact-name:
+        type: string
+        default: "android-build"
+      package-name:
+        description: "Android package name (e.g. com.example.myapp)"
+        type: string
+        required: true
+      status:
+        description: "Release status: completed, draft, halted, inProgress"
+        type: string
+        default: "completed"
+    secrets:
+      google-play-service-account-json:
+        description: "Google Play service account JSON key"
+        required: true
+
+jobs:
+  deploy:
+    name: Deploy to Google Play (${{ inputs.track }})
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: build/
+
+      - name: Find AAB/APK file
+        id: find-file
+        run: |
+          FILE=$(find build/ -name "*.aab" -o -name "*.apk" | head -1)
+          echo "file=${FILE}" >> $GITHUB_OUTPUT
+          echo "Found: ${FILE}"
+
+      - name: Upload to Google Play
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.google-play-service-account-json }}
+          packageName: ${{ inputs.package-name }}
+          releaseFiles: ${{ steps.find-file.outputs.file }}
+          track: ${{ inputs.track }}
+          status: ${{ inputs.status }}
