@@ -45,7 +45,7 @@ jobs:
       run:
         working-directory: ${{ inputs.working-directory }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: actions/setup-python@v5
         with:
@@ -102,14 +102,14 @@ jobs:
           fi
 
       - name: Upload macOS app
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: macos-app
           path: ${{ inputs.working-directory }}/dist/*.app.tar.gz
           retention-days: 14
 
       - name: Upload macOS PKG
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: macos-pkg
           path: ${{ inputs.working-directory }}/dist/*.pkg
@@ -117,7 +117,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload macOS DMG
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: macos-dmg
           path: ${{ inputs.working-directory }}/dist/*.dmg
@@ -132,7 +132,7 @@ jobs:
       run:
         working-directory: ${{ inputs.working-directory }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: actions/setup-python@v5
         with:
@@ -169,7 +169,7 @@ jobs:
           }
 
       - name: Upload Windows build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: windows-build
           path: ${{ inputs.working-directory }}/dist/*.zip
