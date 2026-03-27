@@ -24,6 +24,9 @@ on:
         description: "Google Play service account JSON"
         required: true
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   deploy:
     name: Upload to Google Play (${{ inputs.track }})

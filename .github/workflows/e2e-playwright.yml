@@ -40,6 +40,9 @@ on:
         description: "Environment variables (KEY=VALUE per line)"
         required: false
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   e2e:
     name: Playwright E2E
