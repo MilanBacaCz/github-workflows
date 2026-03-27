@@ -54,6 +54,9 @@ on:
         description: "Temporary keychain password"
         required: false
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build-android:
     name: Android (${{ inputs.android-format }})
