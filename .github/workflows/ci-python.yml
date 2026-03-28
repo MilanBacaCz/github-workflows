@@ -31,6 +31,10 @@ on:
         description: "Paths for mypy (default: src/ only)"
         type: string
         default: "src/"
+      security-ignore-vulns:
+        description: "Comma-separated CVE IDs to ignore in pip-audit (e.g. CVE-2026-4539)"
+        type: string
+        default: ""
     secrets:
       env-vars:
         description: "Environment variables (KEY=VALUE per line)"
@@ -167,7 +171,14 @@ jobs:
         run: pip install pip-audit bandit
 
       - name: pip-audit
-        run: pip-audit
+        run: |
+          ARGS=""
+          if [ -n "${{ inputs.security-ignore-vulns }}" ]; then
+            for vuln in $(echo "${{ inputs.security-ignore-vulns }}" | tr ',' ' '); do
+              ARGS="$ARGS --ignore-vuln $vuln"
+            done
+          fi
+          pip-audit $ARGS
 
       - name: Bandit
         run: bandit -r src/ --skip B101 -x tests/
