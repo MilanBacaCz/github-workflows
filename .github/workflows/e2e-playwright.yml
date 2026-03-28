@@ -87,7 +87,6 @@ jobs:
 
       # --- Common ---
       - name: Set environment variables
-        if: ${{ secrets.env-vars != '' }}
         run: |
           echo "${{ secrets.env-vars }}" >> "$GITHUB_ENV"
 

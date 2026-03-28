@@ -82,19 +82,28 @@ jobs:
         run: flutter pub get
 
       - name: Decode keystore
-        if: ${{ secrets.keystore-base64 != '' }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.keystore-base64 }}
         run: |
-          echo "${{ secrets.keystore-base64 }}" | base64 --decode > android/app/keystore.jks
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > android/app/keystore.jks
+          fi
 
       - name: Create key.properties
-        if: ${{ secrets.keystore-base64 != '' }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.keystore-base64 }}
+          STORE_PASSWORD: ${{ secrets.keystore-password }}
+          KEY_PASSWORD: ${{ secrets.key-password }}
+          KEY_ALIAS: ${{ secrets.key-alias }}
         run: |
-          cat > android/key.properties << EOF
-          storePassword=${{ secrets.keystore-password }}
-          keyPassword=${{ secrets.key-password }}
-          keyAlias=${{ secrets.key-alias }}
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            cat > android/key.properties << EOF
+          storePassword=$STORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
           storeFile=keystore.jks
           EOF
+          fi
 
       - name: Build APK
         if: ${{ inputs.android-format == 'apk' }}
@@ -139,12 +148,15 @@ jobs:
         run: flutter pub get
 
       - name: Import certificate and provisioning profile
-        if: ${{ secrets.ios-certificate-base64 != '' }}
         env:
           CERTIFICATE_BASE64: ${{ secrets.ios-certificate-base64 }}
           PROFILE_BASE64: ${{ secrets.ios-provisioning-profile-base64 }}
           KEYCHAIN_PASSWORD: ${{ secrets.ios-keychain-password }}
         run: |
+          if [ -z "$CERTIFICATE_BASE64" ]; then
+            echo "No iOS certificate provided, skipping signing setup"
+            exit 0
+          fi
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
           PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
