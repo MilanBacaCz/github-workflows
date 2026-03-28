@@ -35,6 +35,10 @@ on:
         description: "Minimum coverage percentage (0 = no threshold)"
         type: number
         default: 0
+      cache-dependency-path:
+        description: "Path to lock file for setup-node cache (auto-resolved from working-directory if empty)"
+        type: string
+        default: ""
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -54,6 +58,7 @@ jobs:
         with:
           node-version: ${{ inputs.node-version }}
           cache: ${{ inputs.package-manager }}
+          cache-dependency-path: ${{ inputs.cache-dependency-path || format('{0}/package-lock.json', inputs.working-directory) }}
 
       - name: Install dependencies
         run: |
@@ -82,6 +87,7 @@ jobs:
         with:
           node-version: ${{ inputs.node-version }}
           cache: ${{ inputs.package-manager }}
+          cache-dependency-path: ${{ inputs.cache-dependency-path || format('{0}/package-lock.json', inputs.working-directory) }}
 
       - name: Install dependencies
         run: |
@@ -110,6 +116,7 @@ jobs:
         with:
           node-version: ${{ inputs.node-version }}
           cache: ${{ inputs.package-manager }}
+          cache-dependency-path: ${{ inputs.cache-dependency-path || format('{0}/package-lock.json', inputs.working-directory) }}
 
       - name: Install dependencies
         run: |
