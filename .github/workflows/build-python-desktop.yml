@@ -35,6 +35,14 @@ on:
         description: "Dependency install command"
         type: string
         default: "pip install -r requirements.txt"
+      macos-runner:
+        description: "macOS runner (macos-latest for ARM, macos-13 for Intel)"
+        type: string
+        default: "macos-latest"
+      artifact-suffix:
+        description: "Suffix for artifact names (e.g. -arm64, -x86_64)"
+        type: string
+        default: ""
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -43,7 +51,7 @@ jobs:
   build-macos:
     name: macOS (.app, .pkg, .dmg)
     if: ${{ inputs.build-macos }}
-    runs-on: macos-latest
+    runs-on: ${{ inputs.macos-runner }}
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
@@ -107,14 +115,14 @@ jobs:
       - name: Upload macOS app
         uses: actions/upload-artifact@v5
         with:
-          name: macos-app
+          name: macos-app${{ inputs.artifact-suffix }}
           path: ${{ inputs.working-directory }}/dist/*.app.tar.gz
           retention-days: 14
 
       - name: Upload macOS PKG
         uses: actions/upload-artifact@v5
         with:
-          name: macos-pkg
+          name: macos-pkg${{ inputs.artifact-suffix }}
           path: ${{ inputs.working-directory }}/dist/*.pkg
           retention-days: 14
           if-no-files-found: ignore
@@ -122,7 +130,7 @@ jobs:
       - name: Upload macOS DMG
         uses: actions/upload-artifact@v5
         with:
-          name: macos-dmg
+          name: macos-dmg${{ inputs.artifact-suffix }}
           path: ${{ inputs.working-directory }}/dist/*.dmg
           retention-days: 14
           if-no-files-found: ignore

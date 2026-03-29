@@ -93,7 +93,7 @@ jobs:
       google-play-service-account-json: ${{ secrets.GOOGLE_PLAY_SA_JSON }}
 ```
 
-### Release Pipeline (Python Desktop — macOS)
+### Release Pipeline (Python Desktop — macOS, dual architecture)
 
 ```yaml
 name: Release
@@ -102,18 +102,42 @@ on:
     tags: ["v*"]
 
 jobs:
-  build:
+  build-arm:
     uses: MilanBacaCz/github-workflows/.github/workflows/build-python-desktop.yml@main
     with:
       app-name: MyApp
       build-script: scripts/build.sh
       build-macos: true
+      macos-runner: macos-latest
+      artifact-suffix: "-arm64"
+
+  build-intel:
+    uses: MilanBacaCz/github-workflows/.github/workflows/build-python-desktop.yml@main
+    with:
+      app-name: MyApp
+      build-script: scripts/build.sh
+      build-macos: true
+      macos-runner: macos-13
+      artifact-suffix: "-x86_64"
 
   release:
-    needs: [build]
+    needs: [build-arm, build-intel]
     uses: MilanBacaCz/github-workflows/.github/workflows/release.yml@main
     with:
-      artifact-names: "macos-app,macos-pkg,macos-dmg"
+      artifact-names: "macos-app-arm64,macos-dmg-arm64,macos-app-x86_64,macos-dmg-x86_64"
+```
+
+### CI Pipeline (Python — non-src layout)
+
+```yaml
+jobs:
+  ci:
+    uses: MilanBacaCz/github-workflows/.github/workflows/ci-python.yml@main
+    with:
+      python-version: "3.13"
+      lint-paths: "mypackage/ tests/"
+      mypy-paths: "mypackage/"
+      security-scan-paths: "mypackage/"
 ```
 
 ## Updating
