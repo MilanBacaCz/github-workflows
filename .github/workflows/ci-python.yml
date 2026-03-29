@@ -47,6 +47,10 @@ on:
         description: "Space-separated apt packages to install before pip (e.g. libegl1 libgl1)"
         type: string
         default: ""
+      bandit-skips:
+        description: "Comma-separated bandit rules to skip (e.g. B101,B608)"
+        type: string
+        default: "B101"
     secrets:
       env-vars:
         description: "Environment variables (KEY=VALUE per line)"
@@ -209,4 +213,4 @@ jobs:
           pip-audit $ARGS
 
       - name: Bandit
-        run: bandit -r ${{ inputs.security-scan-paths }} --skip B101 -x tests/
+        run: bandit -r ${{ inputs.security-scan-paths }} --skip ${{ inputs.bandit-skips }} -x tests/
