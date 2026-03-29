@@ -43,6 +43,10 @@ on:
         description: "Comma-separated CVE IDs to ignore in pip-audit (e.g. CVE-2026-4539)"
         type: string
         default: ""
+      system-packages:
+        description: "Space-separated apt packages to install before pip (e.g. libegl1 libgl1)"
+        type: string
+        default: ""
     secrets:
       env-vars:
         description: "Environment variables (KEY=VALUE per line)"
@@ -71,6 +75,10 @@ jobs:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles(format('{0}/pyproject.toml', inputs.working-directory)) }}
           restore-keys: ${{ runner.os }}-pip-
+
+      - name: Install system packages
+        if: ${{ inputs.system-packages != '' }}
+        run: sudo apt-get update && sudo apt-get install -y ${{ inputs.system-packages }}
 
       - name: Install dependencies
         run: pip install -e ".[dev]"
@@ -102,6 +110,10 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles(format('{0}/pyproject.toml', inputs.working-directory)) }}
           restore-keys: ${{ runner.os }}-pip-
 
+      - name: Install system packages
+        if: ${{ inputs.system-packages != '' }}
+        run: sudo apt-get update && sudo apt-get install -y ${{ inputs.system-packages }}
+
       - name: Install dependencies
         run: pip install -e ".[dev]"
 
@@ -131,6 +143,10 @@ jobs:
       - name: Set environment variables
         run: |
           echo "${{ secrets.env-vars }}" >> "$GITHUB_ENV"
+
+      - name: Install system packages
+        if: ${{ inputs.system-packages != '' }}
+        run: sudo apt-get update && sudo apt-get install -y ${{ inputs.system-packages }}
 
       - name: Install dependencies
         run: pip install -e ".[dev]"
@@ -171,6 +187,10 @@ jobs:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles(format('{0}/pyproject.toml', inputs.working-directory)) }}
           restore-keys: ${{ runner.os }}-pip-
+
+      - name: Install system packages
+        if: ${{ inputs.system-packages != '' }}
+        run: sudo apt-get update && sudo apt-get install -y ${{ inputs.system-packages }}
 
       - name: Install dependencies
         run: pip install -e ".[dev]"
