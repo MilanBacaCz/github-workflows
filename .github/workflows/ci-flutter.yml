@@ -23,6 +23,10 @@ on:
         description: "Minimum coverage percentage (0 = no threshold)"
         type: number
         default: 0
+      coverage-artifact-name:
+        description: "Name for the coverage artifact (must be unique per workflow run)"
+        type: string
+        default: "coverage-report"
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -88,6 +92,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: coverage-report
+          name: ${{ inputs.coverage-artifact-name }}
           path: ${{ inputs.working-directory }}/coverage/lcov.info
           retention-days: 7
