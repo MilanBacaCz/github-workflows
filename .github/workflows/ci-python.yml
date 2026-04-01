@@ -3,6 +3,10 @@ name: Python CI
 on:
   workflow_call:
     inputs:
+      runner:
+        description: "Runner label (ubuntu-latest or self-hosted)"
+        type: string
+        default: "ubuntu-latest"
       python-version:
         description: "Python version"
         type: string
@@ -62,7 +66,7 @@ env:
 jobs:
   lint:
     name: Lint (ruff)
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
@@ -96,7 +100,7 @@ jobs:
   typecheck:
     name: Type check (mypy)
     if: ${{ inputs.run-mypy }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
@@ -126,7 +130,7 @@ jobs:
 
   test:
     name: Tests (pytest)
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
@@ -174,7 +178,7 @@ jobs:
   security:
     name: Security audit
     if: ${{ inputs.run-security }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}

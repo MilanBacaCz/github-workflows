@@ -3,6 +3,10 @@ name: PR Review
 on:
   workflow_call:
     inputs:
+      runner:
+        description: "Runner label (ubuntu-latest or self-hosted)"
+        type: string
+        default: "ubuntu-latest"
       working-directory:
         description: "Working directory"
         type: string
@@ -38,7 +42,7 @@ env:
 jobs:
   coverage-comment:
     name: Coverage comment
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     permissions:
       contents: read
       pull-requests: write
@@ -144,7 +148,7 @@ jobs:
 
   label-pr:
     name: Label PR
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     permissions:
       contents: read
       pull-requests: write

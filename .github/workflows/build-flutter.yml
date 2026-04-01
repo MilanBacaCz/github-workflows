@@ -3,6 +3,10 @@ name: Flutter Build
 on:
   workflow_call:
     inputs:
+      runner:
+        description: "Runner label for Linux jobs (ubuntu-latest or self-hosted)"
+        type: string
+        default: "ubuntu-latest"
       working-directory:
         description: "Directory containing pubspec.yaml"
         type: string
@@ -61,7 +65,7 @@ jobs:
   build-android:
     name: Android (${{ inputs.android-format }})
     if: ${{ inputs.build-android }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}

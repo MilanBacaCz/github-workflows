@@ -1,0 +1,46 @@
+# GitHub Actions self-hosted runner for Hetzner VPS.
+#
+# Deploy via Coolify as a new project "GitHub Runner" with Docker Compose.
+# Set environment variables in Coolify GUI:
+#   GITHUB_REPO_URL    — https://github.com/MilanBacaCz/mediservis
+#   GITHUB_RUNNER_TOKEN — from Settings → Actions → Runners → New self-hosted runner
+#   RUNNER_NAME        — hetzner-runner (optional)
+#
+# For org-level runner, use org URL and org runner token instead.
+
+services:
+  runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: github-runner
+    restart: unless-stopped
+    environment:
+      - GITHUB_REPO_URL=${GITHUB_REPO_URL:?Set GITHUB_REPO_URL in Coolify}
+      - GITHUB_RUNNER_TOKEN=${GITHUB_RUNNER_TOKEN:?Set GITHUB_RUNNER_TOKEN in Coolify}
+      - RUNNER_NAME=${RUNNER_NAME:-hetzner-runner}
+      - RUNNER_LABELS=${RUNNER_LABELS:-self-hosted,linux,hetzner}
+    volumes:
+      # Persistent caches between runs — speeds up pip/npm/flutter installs
+      - runner-pip-cache:/home/runner/.cache/pip
+      - runner-npm-cache:/home/runner/.npm
+      - runner-pub-cache:/home/runner/.pub-cache
+      # Docker socket for docker-in-docker (optional, for build jobs)
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - default
+      - coolify
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "Runner.Listener"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  runner-pip-cache:
+  runner-npm-cache:
+  runner-pub-cache:
+
+networks:
+  coolify:
+    external: true

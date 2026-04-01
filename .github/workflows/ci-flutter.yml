@@ -3,6 +3,10 @@ name: Flutter CI
 on:
   workflow_call:
     inputs:
+      runner:
+        description: "Runner label (ubuntu-latest or self-hosted)"
+        type: string
+        default: "ubuntu-latest"
       flutter-version:
         description: "Flutter version or channel"
         type: string
@@ -35,7 +39,7 @@ jobs:
   analyze:
     name: Analyze
     if: ${{ inputs.run-analyze }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
@@ -59,7 +63,7 @@ jobs:
   test:
     name: Tests
     if: ${{ inputs.run-tests }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
