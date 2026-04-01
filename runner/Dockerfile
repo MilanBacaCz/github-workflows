@@ -4,7 +4,8 @@
 FROM ubuntu:22.04
 
 ARG RUNNER_VERSION=2.322.0
-ARG TARGETARCH=x64
+# Auto-detect: x64 for amd64, arm64 for aarch64
+ARG TARGETARCH
 
 # Prevent interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
@@ -82,7 +83,12 @@ RUN useradd -m -s /bin/bash runner && \
 
 WORKDIR /home/runner/actions-runner
 
-RUN curl -fsSL https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-${TARGETARCH}-${RUNNER_VERSION}.tar.gz \
+# Detect architecture for runner binary download
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then GH_ARCH="x64"; \
+    elif [ "$ARCH" = "aarch64" ]; then GH_ARCH="arm64"; \
+    else echo "Unsupported architecture: $ARCH" && exit 1; fi && \
+    curl -fsSL "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-${GH_ARCH}-${RUNNER_VERSION}.tar.gz" \
     | tar xz && \
     ./bin/installdependencies.sh && \
     chown -R runner:runner /home/runner/actions-runner
