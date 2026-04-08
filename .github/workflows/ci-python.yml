@@ -51,6 +51,10 @@ on:
         description: "Space-separated apt packages to install before pip (e.g. libegl1 libgl1)"
         type: string
         default: ""
+      pre-install:
+        description: "Pip packages to install BEFORE main deps (e.g. 'PyQt6==6.7.1' for ARM64 binary wheel)"
+        type: string
+        default: ""
       bandit-skips:
         description: "Comma-separated bandit rules to skip (e.g. B101,B608)"
         type: string
@@ -86,7 +90,11 @@ jobs:
 
       - name: Install system packages
         if: ${{ inputs.system-packages != '' }}
-        run: sudo apt-get update && sudo apt-get install -y ${{ inputs.system-packages }}
+        run: /usr/bin/sudo apt-get update && /usr/bin/sudo apt-get install -y ${{ inputs.system-packages }}
+
+      - name: Pre-install packages
+        if: ${{ inputs.pre-install != '' }}
+        run: pip install ${{ inputs.pre-install }}
 
       - name: Install dependencies
         run: pip install -e ".[dev]"
@@ -120,7 +128,11 @@ jobs:
 
       - name: Install system packages
         if: ${{ inputs.system-packages != '' }}
-        run: sudo apt-get update && sudo apt-get install -y ${{ inputs.system-packages }}
+        run: /usr/bin/sudo apt-get update && /usr/bin/sudo apt-get install -y ${{ inputs.system-packages }}
+
+      - name: Pre-install packages
+        if: ${{ inputs.pre-install != '' }}
+        run: pip install ${{ inputs.pre-install }}
 
       - name: Install dependencies
         run: pip install -e ".[dev]"
@@ -154,7 +166,11 @@ jobs:
 
       - name: Install system packages
         if: ${{ inputs.system-packages != '' }}
-        run: sudo apt-get update && sudo apt-get install -y ${{ inputs.system-packages }}
+        run: /usr/bin/sudo apt-get update && /usr/bin/sudo apt-get install -y ${{ inputs.system-packages }}
+
+      - name: Pre-install packages
+        if: ${{ inputs.pre-install != '' }}
+        run: pip install ${{ inputs.pre-install }}
 
       - name: Install dependencies
         run: pip install -e ".[dev]"
@@ -198,7 +214,11 @@ jobs:
 
       - name: Install system packages
         if: ${{ inputs.system-packages != '' }}
-        run: sudo apt-get update && sudo apt-get install -y ${{ inputs.system-packages }}
+        run: /usr/bin/sudo apt-get update && /usr/bin/sudo apt-get install -y ${{ inputs.system-packages }}
+
+      - name: Pre-install packages
+        if: ${{ inputs.pre-install != '' }}
+        run: pip install ${{ inputs.pre-install }}
 
       - name: Install dependencies
         run: pip install -e ".[dev]"
