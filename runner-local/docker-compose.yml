@@ -1,0 +1,38 @@
+# GitHub Actions self-hosted runner — local Docker (macOS).
+#
+# Usage:
+#   1. Get org runner token: https://github.com/organizations/MilanBacaCz/settings/actions/runners/new
+#   2. Create .env file with GITHUB_RUNNER_TOKEN=<token>
+#   3. docker compose up -d --build
+#
+# The runner registers at org level — all repos in MilanBacaCz can use it
+# with: runs-on: self-hosted
+
+services:
+  runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: github-runner-local
+    restart: unless-stopped
+    environment:
+      - GITHUB_ORG_URL=${GITHUB_ORG_URL:-https://github.com/Milan-Baca/Telefony-qml}
+      - GITHUB_RUNNER_TOKEN=${GITHUB_RUNNER_TOKEN:?Create .env with GITHUB_RUNNER_TOKEN}
+      - RUNNER_NAME=${RUNNER_NAME:-local-runner}
+      - RUNNER_LABELS=${RUNNER_LABELS:-self-hosted,linux,local}
+    deploy:
+      resources:
+        limits:
+          memory: 4g
+    volumes:
+      - runner-pip-cache:/home/runner/.cache/pip
+      - runner-npm-cache:/home/runner/.npm
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "Runner.Listener"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  runner-pip-cache:
+  runner-npm-cache:
