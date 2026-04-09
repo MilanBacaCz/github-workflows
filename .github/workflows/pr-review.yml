@@ -113,12 +113,14 @@ jobs:
         if: always()
         run: |
           if command -v gh &>/dev/null; then exit 0; fi
+          mkdir -p "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           ARCH=$(dpkg --print-architecture 2>/dev/null || echo "amd64")
           GH_VERSION=$(curl -s https://api.github.com/repos/cli/cli/releases/latest | python3 -c "import sys,json; print(json.load(sys.stdin)['tag_name'].lstrip('v'))" 2>/dev/null || echo "2.74.0")
           curl -sL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_${ARCH}.tar.gz" | tar xz
-          mv "gh_${GH_VERSION}_linux_${ARCH}/bin/gh" /usr/local/bin/gh || mv "gh_${GH_VERSION}_linux_${ARCH}/bin/gh" "$HOME/.local/bin/gh"
+          mv "gh_${GH_VERSION}_linux_${ARCH}/bin/gh" "$HOME/.local/bin/gh"
           rm -rf "gh_${GH_VERSION}_linux_${ARCH}"
-          gh --version
+          "$HOME/.local/bin/gh" --version
 
       # --- Parse & comment ---
       - name: Parse coverage and comment
