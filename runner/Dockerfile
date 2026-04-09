@@ -3,7 +3,7 @@
 
 FROM ubuntu:22.04
 
-ARG RUNNER_VERSION=2.322.0
+ARG RUNNER_VERSION=2.333.1
 # Auto-detect: x64 for amd64, arm64 for aarch64
 ARG TARGETARCH
 
