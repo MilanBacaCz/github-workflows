@@ -58,6 +58,12 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Ensure hostedtoolcache exists (self-hosted)
+        if: ${{ inputs.macos-runner != 'macos-latest' && inputs.macos-runner != 'macos-13' }}
+        run: mkdir -p "${RUNNER_TOOL_CACHE:-$HOME/hostedtoolcache}"
+        env:
+          RUNNER_TOOL_CACHE: ${{ runner.tool_cache }}
+
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ inputs.python-version }}
