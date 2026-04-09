@@ -55,6 +55,10 @@ on:
         description: "Pip packages to install BEFORE main deps (e.g. 'PyQt6==6.7.1' for ARM64 binary wheel)"
         type: string
         default: ""
+      extra-env:
+        description: "Extra env vars to set in all jobs (KEY=VALUE per line)"
+        type: string
+        default: ""
       bandit-skips:
         description: "Comma-separated bandit rules to skip (e.g. B101,B608)"
         type: string
@@ -76,6 +80,10 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
     steps:
       - uses: actions/checkout@v5
+
+      - name: Set extra environment variables
+        if: ${{ inputs.extra-env != '' }}
+        run: echo "${{ inputs.extra-env }}" >> "$GITHUB_ENV"
 
       - uses: actions/setup-python@v5
         with:
@@ -115,6 +123,10 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Set extra environment variables
+        if: ${{ inputs.extra-env != '' }}
+        run: echo "${{ inputs.extra-env }}" >> "$GITHUB_ENV"
+
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ inputs.python-version }}
@@ -148,6 +160,10 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
     steps:
       - uses: actions/checkout@v5
+
+      - name: Set extra environment variables
+        if: ${{ inputs.extra-env != '' }}
+        run: echo "${{ inputs.extra-env }}" >> "$GITHUB_ENV"
 
       - uses: actions/setup-python@v5
         with:
@@ -200,6 +216,10 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
     steps:
       - uses: actions/checkout@v5
+
+      - name: Set extra environment variables
+        if: ${{ inputs.extra-env != '' }}
+        run: echo "${{ inputs.extra-env }}" >> "$GITHUB_ENV"
 
       - uses: actions/setup-python@v5
         with:
