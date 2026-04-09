@@ -93,6 +93,10 @@ RUN ARCH=$(uname -m) && \
     ./bin/installdependencies.sh && \
     chown -R runner:runner /home/runner/actions-runner
 
+# ─── Tool cache for actions/setup-python, actions/setup-node, etc. ───
+ENV AGENT_TOOLSDIRECTORY=/home/runner/_tool
+RUN mkdir -p /home/runner/_tool && chown runner:runner /home/runner/_tool
+
 # ─── Persistent caches ───
 RUN mkdir -p /home/runner/.cache/pip \
              /home/runner/.npm \
