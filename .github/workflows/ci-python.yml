@@ -86,7 +86,7 @@ jobs:
             git clean -ffdx 2>/dev/null || true
           fi
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           clean: true
 
@@ -94,12 +94,12 @@ jobs:
         if: ${{ inputs.extra-env != '' }}
         run: echo "${{ inputs.extra-env }}" >> "$GITHUB_ENV"
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ inputs.python-version }}
 
       - name: Cache pip
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles(format('{0}/pyproject.toml', inputs.working-directory)) }}
@@ -137,7 +137,7 @@ jobs:
             git clean -ffdx 2>/dev/null || true
           fi
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           clean: true
 
@@ -145,12 +145,12 @@ jobs:
         if: ${{ inputs.extra-env != '' }}
         run: echo "${{ inputs.extra-env }}" >> "$GITHUB_ENV"
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ inputs.python-version }}
 
       - name: Cache pip
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles(format('{0}/pyproject.toml', inputs.working-directory)) }}
@@ -184,7 +184,7 @@ jobs:
             git clean -ffdx 2>/dev/null || true
           fi
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           clean: true
 
@@ -192,12 +192,12 @@ jobs:
         if: ${{ inputs.extra-env != '' }}
         run: echo "${{ inputs.extra-env }}" >> "$GITHUB_ENV"
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ inputs.python-version }}
 
       - name: Cache pip
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles(format('{0}/pyproject.toml', inputs.working-directory)) }}
@@ -228,7 +228,7 @@ jobs:
 
       - name: Upload coverage artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: coverage-report
           path: ${{ inputs.working-directory }}/coverage.xml
@@ -249,7 +249,7 @@ jobs:
             git clean -ffdx 2>/dev/null || true
           fi
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           clean: true
 
@@ -257,12 +257,12 @@ jobs:
         if: ${{ inputs.extra-env != '' }}
         run: echo "${{ inputs.extra-env }}" >> "$GITHUB_ENV"
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ inputs.python-version }}
 
       - name: Cache pip
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles(format('{0}/pyproject.toml', inputs.working-directory)) }}
