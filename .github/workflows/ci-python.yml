@@ -79,7 +79,16 @@ jobs:
       run:
         working-directory: ${{ inputs.working-directory }}
     steps:
+      - name: Clean workspace
+        run: |
+          if [ -d "${{ github.workspace }}/.git" ]; then
+            cd "${{ github.workspace }}"
+            git clean -ffdx 2>/dev/null || true
+          fi
+
       - uses: actions/checkout@v5
+        with:
+          clean: true
 
       - name: Set extra environment variables
         if: ${{ inputs.extra-env != '' }}
@@ -121,7 +130,16 @@ jobs:
       run:
         working-directory: ${{ inputs.working-directory }}
     steps:
+      - name: Clean workspace
+        run: |
+          if [ -d "${{ github.workspace }}/.git" ]; then
+            cd "${{ github.workspace }}"
+            git clean -ffdx 2>/dev/null || true
+          fi
+
       - uses: actions/checkout@v5
+        with:
+          clean: true
 
       - name: Set extra environment variables
         if: ${{ inputs.extra-env != '' }}
@@ -159,7 +177,16 @@ jobs:
       run:
         working-directory: ${{ inputs.working-directory }}
     steps:
+      - name: Clean workspace
+        run: |
+          if [ -d "${{ github.workspace }}/.git" ]; then
+            cd "${{ github.workspace }}"
+            git clean -ffdx 2>/dev/null || true
+          fi
+
       - uses: actions/checkout@v5
+        with:
+          clean: true
 
       - name: Set extra environment variables
         if: ${{ inputs.extra-env != '' }}
@@ -215,7 +242,16 @@ jobs:
       run:
         working-directory: ${{ inputs.working-directory }}
     steps:
+      - name: Clean workspace
+        run: |
+          if [ -d "${{ github.workspace }}/.git" ]; then
+            cd "${{ github.workspace }}"
+            git clean -ffdx 2>/dev/null || true
+          fi
+
       - uses: actions/checkout@v5
+        with:
+          clean: true
 
       - name: Set extra environment variables
         if: ${{ inputs.extra-env != '' }}
