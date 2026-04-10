@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     git \
     jq \
+    sudo \
     unzip \
     zip \
     ca-certificates \
@@ -34,6 +35,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libdrm2 \
     libxkbcommon0 \
     libgbm1 \
+    # For PyQt6 / Qt
+    libegl1 \
+    libgl1 \
     # For Python builds
     zlib1g-dev \
     libbz2-dev \
@@ -79,7 +83,9 @@ RUN git clone --depth 1 --branch 3.41.6 https://github.com/flutter/flutter.git $
 # ─── GitHub Actions Runner ───
 RUN useradd -m -s /bin/bash runner && \
     mkdir -p /home/runner/actions-runner && \
-    chown -R runner:runner /home/runner
+    chown -R runner:runner /home/runner && \
+    echo "runner ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/runner && \
+    chmod 0440 /etc/sudoers.d/runner
 
 WORKDIR /home/runner/actions-runner
 
