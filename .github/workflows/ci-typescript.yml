@@ -43,6 +43,10 @@ on:
         description: "Path to lock file for setup-node cache (auto-resolved from working-directory if empty)"
         type: string
         default: ""
+      upload-coverage:
+        description: "Upload coverage as artifact"
+        type: boolean
+        default: false
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -141,7 +145,7 @@ jobs:
           fi
 
       - name: Upload coverage artifact
-        if: always()
+        if: ${{ always() && inputs.upload-coverage }}
         uses: actions/upload-artifact@v5
         with:
           name: coverage-report

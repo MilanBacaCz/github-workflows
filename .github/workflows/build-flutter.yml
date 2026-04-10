@@ -35,6 +35,10 @@ on:
         description: "Java version for Android build"
         type: string
         default: "17"
+      upload-artifacts:
+        description: "Upload build artifacts (APK/AAB/IPA)"
+        type: boolean
+        default: false
     secrets:
       keystore-base64:
         description: "Android keystore file (base64 encoded)"
@@ -122,7 +126,7 @@ jobs:
         run: flutter build appbundle --${{ inputs.build-type }}
 
       - name: Upload APK
-        if: ${{ inputs.android-format == 'apk' }}
+        if: ${{ inputs.android-format == 'apk' && inputs.upload-artifacts }}
         uses: actions/upload-artifact@v5
         with:
           name: android-build
@@ -130,7 +134,7 @@ jobs:
           retention-days: 14
 
       - name: Upload AAB
-        if: ${{ inputs.android-format == 'appbundle' }}
+        if: ${{ inputs.android-format == 'appbundle' && inputs.upload-artifacts }}
         uses: actions/upload-artifact@v5
         with:
           name: android-build
