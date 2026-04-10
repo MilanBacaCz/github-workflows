@@ -58,15 +58,31 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Ensure hostedtoolcache exists (self-hosted)
-        if: ${{ inputs.macos-runner != 'macos-latest' && inputs.macos-runner != 'macos-13' }}
-        run: mkdir -p "${RUNNER_TOOL_CACHE:-$HOME/hostedtoolcache}"
-        env:
-          RUNNER_TOOL_CACHE: ${{ runner.tool_cache }}
-
+      # GitHub-hosted macOS: use setup-python action (needs sudo for framework install)
       - uses: actions/setup-python@v5
+        if: ${{ inputs.macos-runner == 'macos-latest' || inputs.macos-runner == 'macos-13' }}
         with:
           python-version: ${{ inputs.python-version }}
+
+      # Self-hosted macOS: use Homebrew-installed Python (no sudo needed)
+      - name: Set up Homebrew Python (self-hosted)
+        if: ${{ inputs.macos-runner != 'macos-latest' && inputs.macos-runner != 'macos-13' }}
+        run: |
+          BREW_PYTHON="/opt/homebrew/opt/python@${{ inputs.python-version }}/bin"
+          if [ ! -d "$BREW_PYTHON" ]; then
+            echo "::error::Homebrew Python ${{ inputs.python-version }} not found. Install with: brew install python@${{ inputs.python-version }}"
+            exit 1
+          fi
+          echo "$BREW_PYTHON" >> "$GITHUB_PATH"
+          echo "Python from: $BREW_PYTHON"
+          "$BREW_PYTHON/python3" --version
+
+      - name: Create venv (self-hosted macOS)
+        if: ${{ inputs.macos-runner != 'macos-latest' && inputs.macos-runner != 'macos-13' }}
+        run: |
+          python3 -m venv .venv-build
+          echo "$PWD/.venv-build/bin" >> "$GITHUB_PATH"
+          .venv-build/bin/python -m pip install --upgrade pip
 
       - name: Install dependencies
         run: |
