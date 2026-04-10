@@ -145,27 +145,31 @@ jobs:
               "dist/${{ inputs.app-name }}-macos.dmg"
           fi
 
+      # Upload artifacts only on push (not on PR) to save storage quota
       - name: Upload macOS app
+        if: ${{ github.event_name != 'pull_request' }}
         uses: actions/upload-artifact@v5
         with:
           name: macos-app${{ inputs.artifact-suffix }}
           path: ${{ inputs.working-directory }}/dist/*.app.tar.gz
-          retention-days: 14
+          retention-days: 7
 
       - name: Upload macOS PKG
+        if: ${{ github.event_name != 'pull_request' }}
         uses: actions/upload-artifact@v5
         with:
           name: macos-pkg${{ inputs.artifact-suffix }}
           path: ${{ inputs.working-directory }}/dist/*.pkg
-          retention-days: 14
+          retention-days: 7
           if-no-files-found: ignore
 
       - name: Upload macOS DMG
+        if: ${{ github.event_name != 'pull_request' }}
         uses: actions/upload-artifact@v5
         with:
           name: macos-dmg${{ inputs.artifact-suffix }}
           path: ${{ inputs.working-directory }}/dist/*.dmg
-          retention-days: 14
+          retention-days: 7
           if-no-files-found: ignore
 
   build-windows:
