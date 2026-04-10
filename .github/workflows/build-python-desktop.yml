@@ -67,20 +67,31 @@ jobs:
       # Self-hosted macOS: use Homebrew-installed Python (no sudo needed)
       - name: Set up Homebrew Python (self-hosted)
         if: ${{ inputs.macos-runner != 'macos-latest' && inputs.macos-runner != 'macos-13' }}
+        shell: /bin/bash -l {0}
         run: |
-          BREW_PYTHON="/opt/homebrew/opt/python@${{ inputs.python-version }}/bin"
-          if [ ! -d "$BREW_PYTHON" ]; then
-            echo "::error::Homebrew Python ${{ inputs.python-version }} not found. Install with: brew install python@${{ inputs.python-version }}"
+          PYTHON_BIN=$(command -v python${{ inputs.python-version }} || true)
+          if [ -z "$PYTHON_BIN" ]; then
+            # Fallback: check Homebrew prefix directly
+            for PREFIX in /opt/homebrew /usr/local; do
+              CAND="$PREFIX/opt/python@${{ inputs.python-version }}/bin/python${{ inputs.python-version }}"
+              if [ -x "$CAND" ]; then
+                PYTHON_BIN="$CAND"
+                break
+              fi
+            done
+          fi
+          if [ -z "$PYTHON_BIN" ]; then
+            echo "::error::Python ${{ inputs.python-version }} not found on runner. Install with: brew install python@${{ inputs.python-version }}"
             exit 1
           fi
-          echo "$BREW_PYTHON" >> "$GITHUB_PATH"
-          echo "Python from: $BREW_PYTHON"
-          "$BREW_PYTHON/python3" --version
+          echo "Using Python: $PYTHON_BIN"
+          "$PYTHON_BIN" --version
+          echo "$(dirname "$PYTHON_BIN")" >> "$GITHUB_PATH"
 
       - name: Create venv (self-hosted macOS)
         if: ${{ inputs.macos-runner != 'macos-latest' && inputs.macos-runner != 'macos-13' }}
         run: |
-          python3 -m venv .venv-build
+          python${{ inputs.python-version }} -m venv .venv-build
           echo "$PWD/.venv-build/bin" >> "$GITHUB_PATH"
           .venv-build/bin/python -m pip install --upgrade pip
 
