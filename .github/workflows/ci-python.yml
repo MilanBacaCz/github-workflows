@@ -63,6 +63,10 @@ on:
         description: "Comma-separated bandit rules to skip (e.g. B101,B608)"
         type: string
         default: "B101"
+      upload-coverage:
+        description: "Upload coverage.xml as artifact"
+        type: boolean
+        default: false
     secrets:
       env-vars:
         description: "Environment variables (KEY=VALUE per line)"
@@ -227,7 +231,7 @@ jobs:
             --cov-fail-under=${{ inputs.coverage-threshold }}
 
       - name: Upload coverage artifact
-        if: always()
+        if: ${{ always() && inputs.upload-coverage }}
         uses: actions/upload-artifact@v5
         with:
           name: coverage-report

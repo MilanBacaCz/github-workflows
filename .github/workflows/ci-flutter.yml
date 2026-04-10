@@ -31,6 +31,10 @@ on:
         description: "Name for the coverage artifact (must be unique per workflow run)"
         type: string
         default: "coverage-report"
+      upload-coverage:
+        description: "Upload coverage as artifact"
+        type: boolean
+        default: false
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -103,7 +107,7 @@ jobs:
           fi
 
       - name: Upload coverage artifact
-        if: always()
+        if: ${{ always() && inputs.upload-coverage }}
         uses: actions/upload-artifact@v5
         with:
           name: ${{ inputs.coverage-artifact-name }}
