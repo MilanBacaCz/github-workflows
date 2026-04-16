@@ -109,6 +109,9 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles(format('{0}/pyproject.toml', inputs.working-directory)) }}
           restore-keys: ${{ runner.os }}-pip-
 
+      - name: Set secret environment variables
+        run: echo "${{ secrets.env-vars }}" >> "$GITHUB_ENV"
+
       - name: Install system packages
         if: ${{ inputs.system-packages != '' }}
         run: /usr/bin/sudo apt-get update && /usr/bin/sudo apt-get install -y ${{ inputs.system-packages }}
@@ -159,6 +162,9 @@ jobs:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles(format('{0}/pyproject.toml', inputs.working-directory)) }}
           restore-keys: ${{ runner.os }}-pip-
+
+      - name: Set secret environment variables
+        run: echo "${{ secrets.env-vars }}" >> "$GITHUB_ENV"
 
       - name: Install system packages
         if: ${{ inputs.system-packages != '' }}
@@ -271,6 +277,9 @@ jobs:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles(format('{0}/pyproject.toml', inputs.working-directory)) }}
           restore-keys: ${{ runner.os }}-pip-
+
+      - name: Set secret environment variables
+        run: echo "${{ secrets.env-vars }}" >> "$GITHUB_ENV"
 
       - name: Install system packages
         if: ${{ inputs.system-packages != '' }}
