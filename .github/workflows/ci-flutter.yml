@@ -50,10 +50,14 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # On GitHub-hosted runners, install Flutter via action.
-      # On self-hosted runners, Flutter is pre-installed in PATH.
+      # On GitHub-hosted runners (ubuntu-*, macos-*, windows-*), install Flutter
+      # via the action. On any self-hosted runner (labels like 'self-hosted',
+      # 'heavy', 'light', custom tier names), Flutter is pre-installed in the
+      # runner image — skip the download. Google does not publish ARM64 stable
+      # binaries, so flutter-action cannot run on our Hetzner ARM64 runners
+      # regardless of the label name.
       - uses: subosito/flutter-action@v2
-        if: ${{ inputs.runner != 'self-hosted' }}
+        if: ${{ startsWith(inputs.runner, 'ubuntu-') || startsWith(inputs.runner, 'macos-') || startsWith(inputs.runner, 'windows-') }}
         with:
           flutter-version: ${{ inputs.flutter-version }}
           cache: true
@@ -80,8 +84,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # See analyze job for rationale; same self-hosted / GitHub-hosted split.
       - uses: subosito/flutter-action@v2
-        if: ${{ inputs.runner != 'self-hosted' }}
+        if: ${{ startsWith(inputs.runner, 'ubuntu-') || startsWith(inputs.runner, 'macos-') || startsWith(inputs.runner, 'windows-') }}
         with:
           flutter-version: ${{ inputs.flutter-version }}
           cache: true
