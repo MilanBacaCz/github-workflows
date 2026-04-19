@@ -81,8 +81,12 @@ jobs:
           distribution: temurin
           java-version: ${{ inputs.java-version }}
 
+      # Install Flutter only on GitHub-hosted runners. Self-hosted runners
+      # (including custom tier labels like 'heavy' / 'light') have Flutter
+      # pre-installed in the runner image — necessary because Google does not
+      # publish ARM64 stable binaries for flutter-action to download.
       - uses: subosito/flutter-action@v2
-        if: ${{ inputs.runner != 'self-hosted' }}
+        if: ${{ startsWith(inputs.runner, 'ubuntu-') || startsWith(inputs.runner, 'macos-') || startsWith(inputs.runner, 'windows-') }}
         with:
           flutter-version: ${{ inputs.flutter-version }}
           cache: true
